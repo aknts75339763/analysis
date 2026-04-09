@@ -1,0 +1,769 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Week 5 — Gait Analysis | 보행분석</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --surface2: #22263a;
+    --border: rgba(255,255,255,0.08);
+    --text: #e8eaf0;
+    --muted: #7b82a0;
+    --blue: #4f8ef7;
+    --red: #f76f6f;
+    --green: #4ecb91;
+    --amber: #f7c34f;
+    --teal: #4fcfcb;
+    --purple: #a78bfa;
+    --accent: #4f8ef7;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    min-height: 100vh;
+    font-size: 14px;
+  }
+
+  /* HEADER */
+  header {
+    background: linear-gradient(135deg, #0d1b3e 0%, #1a1d27 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 1.5rem 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .logo { display: flex; align-items: center; gap: 12px; }
+  .logo-icon {
+    width: 36px; height: 36px;
+    background: var(--blue);
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+  }
+  .logo h1 { font-size: 17px; font-weight: 600; color: var(--text); }
+  .logo span { font-size: 12px; color: var(--muted); display: block; }
+  .badge-week {
+    background: rgba(79,142,247,0.15);
+    color: var(--blue);
+    border: 1px solid rgba(79,142,247,0.3);
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 500;
+  }
+
+  /* LAYOUT */
+  .container { max-width: 1100px; margin: 0 auto; padding: 2rem; }
+
+  /* TABS */
+  .tabs {
+    display: flex;
+    gap: 0;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 4px;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+  }
+  .tab {
+    flex: 1;
+    min-width: 120px;
+    padding: 10px 16px;
+    font-size: 13px;
+    font-weight: 500;
+    border: none;
+    background: transparent;
+    color: var(--muted);
+    border-radius: 9px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .tab:hover { color: var(--text); background: var(--surface2); }
+  .tab.active { background: var(--blue); color: #fff; }
+
+  /* PANELS */
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  /* CONTROLS */
+  .controls {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 12px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.25rem;
+    margin-bottom: 1.5rem;
+  }
+  .ctrl label {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    display: block;
+    margin-bottom: 8px;
+  }
+  .ctrl-row { display: flex; align-items: center; gap: 10px; }
+  .ctrl-row input[type=range] {
+    flex: 1;
+    -webkit-appearance: none;
+    height: 4px;
+    background: var(--surface2);
+    border-radius: 2px;
+    outline: none;
+  }
+  .ctrl-row input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 16px; height: 16px;
+    border-radius: 50%;
+    background: var(--blue);
+    cursor: pointer;
+    box-shadow: 0 0 0 3px rgba(79,142,247,0.2);
+  }
+  .ctrl-val {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--blue);
+    min-width: 38px;
+    text-align: right;
+  }
+
+  /* METRICS */
+  .metrics {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 10px;
+    margin-bottom: 1.5rem;
+  }
+  .metric {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1rem;
+    transition: border-color 0.2s;
+  }
+  .metric:hover { border-color: rgba(79,142,247,0.4); }
+  .metric-label { font-size: 11px; color: var(--muted); margin-bottom: 6px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.04em; }
+  .metric-val { font-size: 22px; font-weight: 700; color: var(--text); }
+  .metric-unit { font-size: 11px; color: var(--muted); margin-left: 3px; font-weight: 400; }
+
+  /* CHARTS */
+  .chart-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.25rem;
+    margin-bottom: 1rem;
+  }
+  .chart-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+  canvas { display: block; width: 100% !important; max-height: 240px; }
+
+  /* GRID */
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  @media(max-width: 640px) { .two-col { grid-template-columns: 1fr; } }
+
+  /* BADGE */
+  .badge {
+    display: inline-flex; align-items: center;
+    font-size: 11px; font-weight: 500;
+    padding: 2px 10px;
+    border-radius: 20px;
+  }
+  .badge-blue { background: rgba(79,142,247,0.15); color: var(--blue); }
+  .badge-red { background: rgba(247,111,111,0.15); color: var(--red); }
+  .badge-green { background: rgba(78,203,145,0.15); color: var(--green); }
+  .badge-amber { background: rgba(247,195,79,0.15); color: var(--amber); }
+
+  /* SYMMETRY */
+  .sym-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .sym-row:last-child { border-bottom: none; }
+  .sym-label { font-size: 13px; color: var(--muted); }
+  .sym-val { font-size: 14px; font-weight: 600; color: var(--text); }
+  .bar-track {
+    height: 6px; background: var(--surface2);
+    border-radius: 3px; margin-top: 6px; overflow: hidden;
+  }
+  .bar-fill { height: 100%; border-radius: 3px; background: var(--green); transition: width 0.4s; }
+
+  /* TABLE */
+  .data-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .data-table th {
+    font-size: 11px; font-weight: 600; color: var(--muted);
+    text-transform: uppercase; letter-spacing: 0.05em;
+    padding: 10px 12px; text-align: left;
+    border-bottom: 1px solid var(--border);
+  }
+  .data-table td { padding: 10px 12px; border-bottom: 1px solid var(--border); color: var(--text); }
+  .data-table tr:last-child td { border-bottom: none; }
+  .data-table tr:hover td { background: var(--surface2); }
+
+  /* INFO BOX */
+  .info-box {
+    background: rgba(79,142,247,0.08);
+    border: 1px solid rgba(79,142,247,0.2);
+    border-radius: 10px;
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+    font-size: 13px;
+    color: var(--muted);
+    line-height: 1.6;
+  }
+  .info-box strong { color: var(--blue); }
+
+  /* SECTION DIVIDER */
+  .section-title {
+    font-size: 11px; font-weight: 600; color: var(--muted);
+    text-transform: uppercase; letter-spacing: 0.08em;
+    margin-bottom: 0.75rem; margin-top: 1.5rem;
+  }
+
+  /* FOOTER */
+  footer {
+    text-align: center;
+    padding: 2rem;
+    color: var(--muted);
+    font-size: 12px;
+    border-top: 1px solid var(--border);
+    margin-top: 3rem;
+  }
+  footer a { color: var(--blue); text-decoration: none; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">🦶</div>
+    <div>
+      <h1>Gait Analysis Dashboard</h1>
+      <span>Digital Healthcare · Physical Therapy</span>
+    </div>
+  </div>
+  <div class="badge-week">Week 5</div>
+</header>
+
+<div class="container">
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('beginner')">🔰 Beginner — Heel Strike Detection</button>
+    <button class="tab" onclick="switchTab('bilateral')">⚖️ Bilateral — Left & Right Analysis</button>
+    <button class="tab" onclick="switchTab('advanced')">🏥 Advanced — Normal vs Pathological</button>
+  </div>
+
+  <!-- ===== BEGINNER ===== -->
+  <div id="tab-beginner" class="panel active">
+    <div class="info-box">
+      <strong>초급 (Beginner):</strong> 수직(Z축) 가속도 신호에서 heel strike 이벤트를 감지하고 기본 보행 파라미터를 계산합니다.
+      슬라이더로 보행 주파수, 노이즈, 감지 임계값을 조정해보세요.
+    </div>
+    <div class="controls">
+      <div class="ctrl">
+        <label>Cadence (Hz)</label>
+        <div class="ctrl-row">
+          <input type="range" min="0.6" max="2.0" step="0.1" value="1.2" id="cad" oninput="updateBeg()">
+          <span class="ctrl-val" id="cad-v">1.2</span>
+        </div>
+      </div>
+      <div class="ctrl">
+        <label>Noise Level</label>
+        <div class="ctrl-row">
+          <input type="range" min="0.05" max="0.5" step="0.05" value="0.15" id="noise" oninput="updateBeg()">
+          <span class="ctrl-val" id="noise-v">0.15</span>
+        </div>
+      </div>
+      <div class="ctrl">
+        <label>Detection Threshold (m/s²)</label>
+        <div class="ctrl-row">
+          <input type="range" min="9.5" max="12.0" step="0.1" value="10.5" id="thresh" oninput="updateBeg()">
+          <span class="ctrl-val" id="thresh-v">10.5</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="metrics" id="beg-metrics"></div>
+
+    <div class="chart-card">
+      <div class="chart-title"><span class="dot" style="background:var(--blue)"></span> Z-axis Acceleration &amp; Heel Strike Detection</div>
+      <canvas id="beg-chart" height="200"></canvas>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title"><span class="dot" style="background:var(--teal)"></span> Stride Time Distribution</div>
+      <canvas id="beg-stride-chart" height="160"></canvas>
+    </div>
+
+    <div class="section-title">Heel Strike Events Table</div>
+    <div class="chart-card">
+      <div style="overflow-x:auto;"><table class="data-table" id="beg-table"></table></div>
+    </div>
+  </div>
+
+  <!-- ===== BILATERAL ===== -->
+  <div id="tab-bilateral" class="panel">
+    <div class="info-box">
+      <strong>중급 (Intermediate):</strong> 좌발과 우발의 가속도 신호를 별도로 생성하여 보행 파라미터를 계산하고 좌우 대칭성을 분석합니다.
+    </div>
+    <div class="controls">
+      <div class="ctrl">
+        <label>Cadence (Hz)</label>
+        <div class="ctrl-row">
+          <input type="range" min="0.6" max="2.0" step="0.1" value="1.2" id="bi-cad" oninput="updateBilateral()">
+          <span class="ctrl-val" id="bi-cad-v">1.2</span>
+        </div>
+      </div>
+      <div class="ctrl">
+        <label>Phase Offset (%)</label>
+        <div class="ctrl-row">
+          <input type="range" min="30" max="70" step="1" value="50" id="bi-phase" oninput="updateBilateral()">
+          <span class="ctrl-val" id="bi-phase-v">50</span>
+        </div>
+      </div>
+      <div class="ctrl">
+        <label>Left Amplitude</label>
+        <div class="ctrl-row">
+          <input type="range" min="0.5" max="3.5" step="0.1" value="2.5" id="bi-lamp" oninput="updateBilateral()">
+          <span class="ctrl-val" id="bi-lamp-v">2.5</span>
+        </div>
+      </div>
+      <div class="ctrl">
+        <label>Right Amplitude</label>
+        <div class="ctrl-row">
+          <input type="range" min="0.5" max="3.5" step="0.1" value="2.5" id="bi-ramp" oninput="updateBilateral()">
+          <span class="ctrl-val" id="bi-ramp-v">2.5</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="metrics" id="bi-metrics"></div>
+
+    <div class="two-col">
+      <div class="chart-card">
+        <div class="chart-title"><span class="badge badge-blue">Left Foot</span></div>
+        <canvas id="bi-left-chart" height="180"></canvas>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title"><span class="badge badge-red">Right Foot</span></div>
+        <canvas id="bi-right-chart" height="180"></canvas>
+      </div>
+    </div>
+
+    <div class="chart-card">
+      <div class="chart-title"><span class="dot" style="background:var(--purple)"></span> Gait Parameter Comparison</div>
+      <canvas id="bi-bar-chart" height="180"></canvas>
+    </div>
+
+    <div class="chart-card">
+      <div class="chart-title"><span class="dot" style="background:var(--green)"></span> Symmetry Analysis</div>
+      <div id="sym-panel"></div>
+    </div>
+  </div>
+
+  <!-- ===== ADVANCED ===== -->
+  <div id="tab-advanced" class="panel">
+    <div class="info-box">
+      <strong>고급 (Advanced):</strong> 정상 보행(Normal)과 반측 마비 보행(Hemiplegic Gait)을 시뮬레이션하여 변동성(CV)을 비교합니다.
+      환측 진폭을 낮추면 실제 편마비 환자의 보행 패턴을 재현할 수 있습니다.
+    </div>
+    <div class="controls">
+      <div class="ctrl">
+        <label>Normal Cadence (Hz)</label>
+        <div class="ctrl-row">
+          <input type="range" min="0.8" max="2.0" step="0.1" value="1.2" id="adv-ncad" oninput="updateAdvanced()">
+          <span class="ctrl-val" id="adv-ncad-v">1.2</span>
+        </div>
+      </div>
+      <div class="ctrl">
+        <label>Hemiplegic Cadence (Hz)</label>
+        <div class="ctrl-row">
+          <input type="range" min="0.4" max="1.4" step="0.1" value="0.9" id="adv-hcad" oninput="updateAdvanced()">
+          <span class="ctrl-val" id="adv-hcad-v">0.9</span>
+        </div>
+      </div>
+      <div class="ctrl">
+        <label>Affected Side Amplitude</label>
+        <div class="ctrl-row">
+          <input type="range" min="0.2" max="2.0" step="0.1" value="0.8" id="adv-hamp" oninput="updateAdvanced()">
+          <span class="ctrl-val" id="adv-hamp-v">0.8</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="two-col">
+      <div class="chart-card">
+        <div class="chart-title"><span class="badge badge-green">Normal Gait</span></div>
+        <canvas id="adv-norm-chart" height="180"></canvas>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title"><span class="badge badge-amber">Hemiplegic Gait</span></div>
+        <canvas id="adv-hemi-chart" height="180"></canvas>
+      </div>
+    </div>
+
+    <div class="chart-card">
+      <div class="chart-title"><span class="dot" style="background:var(--amber)"></span> Stride Variability — Coefficient of Variation (%)</div>
+      <canvas id="adv-cv-chart" height="200"></canvas>
+    </div>
+
+    <div class="chart-card">
+      <div class="chart-title"><span class="dot" style="background:var(--teal)"></span> Clinical Parameter Comparison</div>
+      <div style="overflow-x:auto;"><table class="data-table" id="adv-table"></table></div>
+    </div>
+  </div>
+</div>
+
+<footer>
+  Week 5 · Digital Healthcare &amp; Physical Therapy · Gait Analysis
+  &nbsp;|&nbsp; Built with Chart.js &nbsp;|&nbsp;
+  <a href="#" onclick="downloadCSV()">📥 Download CSV</a>
+</footer>
+
+<script>
+const SR = 100, DUR = 20;
+const t = Array.from({length: DUR * SR}, (_, i) => i / SR);
+
+function seededRand(seed) {
+  let s = seed;
+  return () => { s = (s * 16807) % 2147483647; return (s - 1) / 2147483646; };
+}
+
+function genSignal(cadHz, amp, noise, phaseRad, seed = 42) {
+  const r = seededRand(seed);
+  return t.map(ti => {
+    const sq = Math.sin(2 * Math.PI * cadHz * ti + phaseRad) > 0 ? 1 : -1;
+    const strike = Math.max(sq, 0) * amp;
+    const base = 0.5 * Math.sin(2 * Math.PI * cadHz * ti + phaseRad);
+    return 9.81 + base + strike + noise * (r() * 2 - 1);
+  });
+}
+
+function findPeaks(sig, threshold, minDist) {
+  const peaks = [];
+  for (let i = 1; i < sig.length - 1; i++) {
+    if (sig[i] > threshold && sig[i] > sig[i - 1] && sig[i] > sig[i + 1]) {
+      if (!peaks.length || i - peaks[peaks.length - 1] >= minDist) peaks.push(i);
+    }
+  }
+  return peaks;
+}
+
+const mean = arr => arr.reduce((a, b) => a + b, 0) / arr.length;
+const std = arr => { const m = mean(arr); return Math.sqrt(arr.reduce((a, b) => a + (b - m) ** 2, 0) / arr.length); };
+const cv = arr => mean(arr) > 0 ? (std(arr) / mean(arr)) * 100 : 0;
+const fmt = (v, d = 3) => isFinite(v) ? v.toFixed(d) : '--';
+
+const charts = {};
+function makeChart(id, cfg) {
+  if (charts[id]) { charts[id].destroy(); delete charts[id]; }
+  const ctx = document.getElementById(id);
+  if (!ctx) return;
+  Chart.defaults.color = '#7b82a0';
+  Chart.defaults.borderColor = 'rgba(255,255,255,0.06)';
+  charts[id] = new Chart(ctx, cfg);
+}
+
+function setMetrics(id, items) {
+  document.getElementById(id).innerHTML = items.map(({ label, val, unit }) =>
+    `<div class="metric">
+      <div class="metric-label">${label}</div>
+      <div class="metric-val">${val}<span class="metric-unit">${unit || ''}</span></div>
+    </div>`
+  ).join('');
+}
+
+const lineOpts = (yLabel = 'Accel (m/s²)') => ({
+  responsive: true, animation: false, maintainAspectRatio: true,
+  plugins: { legend: { labels: { font: { size: 11 }, boxWidth: 10, color: '#7b82a0' } }, tooltip: { mode: 'index', intersect: false } },
+  scales: {
+    x: { ticks: { maxTicksLimit: 10, font: { size: 10 }, color: '#7b82a0' }, grid: { color: 'rgba(255,255,255,0.05)' } },
+    y: { title: { display: true, text: yLabel, color: '#7b82a0', font: { size: 10 } }, ticks: { font: { size: 10 }, color: '#7b82a0' }, grid: { color: 'rgba(255,255,255,0.05)' } }
+  }
+});
+
+const barOpts = (yLabel = 'Time (s)') => ({
+  responsive: true, animation: false, maintainAspectRatio: true,
+  plugins: { legend: { labels: { font: { size: 11 }, boxWidth: 10, color: '#7b82a0' } } },
+  scales: {
+    x: { ticks: { font: { size: 10 }, color: '#7b82a0' }, grid: { display: false } },
+    y: { title: { display: true, text: yLabel, color: '#7b82a0', font: { size: 10 } }, ticks: { font: { size: 10 }, color: '#7b82a0' }, grid: { color: 'rgba(255,255,255,0.05)' } }
+  }
+});
+
+// ====== BEGINNER ======
+let lastBegData = {};
+function updateBeg() {
+  const cad = +document.getElementById('cad').value;
+  const noise = +document.getElementById('noise').value;
+  const thresh = +document.getElementById('thresh').value;
+  document.getElementById('cad-v').textContent = cad.toFixed(1);
+  document.getElementById('noise-v').textContent = noise.toFixed(2);
+  document.getElementById('thresh-v').textContent = thresh.toFixed(1);
+
+  const sig = genSignal(cad * 2, 2.0, noise, 0, 42);
+  const peaks = findPeaks(sig, thresh, 30);
+  const hsTimes = peaks.map(i => t[i]);
+  const strides = hsTimes.slice(1).map((v, i) => v - hsTimes[i]);
+  const cadSpm = strides.length > 0 ? 60 / mean(strides) : 0;
+
+  lastBegData = { sig, peaks, hsTimes, strides, cad, noise, thresh };
+
+  setMetrics('beg-metrics', [
+    { label: 'Heel Strikes Detected', val: peaks.length },
+    { label: 'Cadence', val: fmt(cadSpm, 1), unit: 'steps/min' },
+    { label: 'Mean Stride Time', val: strides.length ? fmt(mean(strides)) : '--', unit: 's' },
+    { label: 'Stride Time SD', val: strides.length > 1 ? fmt(std(strides)) : '--', unit: 's' },
+  ]);
+
+  const step = 5;
+  const tL = t.filter((_, i) => i % step === 0).map(v => v.toFixed(1));
+  const sigD = sig.filter((_, i) => i % step === 0);
+  const peakD = tL.map((_, i) => peaks.includes(i * step) ? sig[i * step] : null);
+
+  makeChart('beg-chart', {
+    type: 'line',
+    data: {
+      labels: tL,
+      datasets: [
+        { label: 'Accel_Z', data: sigD, borderColor: '#4f8ef7', borderWidth: 1.5, pointRadius: 0, tension: 0.1, fill: false },
+        { label: 'Heel Strike', data: peakD, type: 'scatter', pointBackgroundColor: '#f76f6f', pointRadius: 6, borderColor: 'transparent' },
+        { label: `Threshold (${thresh.toFixed(1)})`, data: tL.map(() => thresh), borderColor: '#f76f6f', borderDash: [5, 4], borderWidth: 1, pointRadius: 0, fill: false }
+      ]
+    },
+    options: { ...lineOpts(), plugins: { ...lineOpts().plugins, annotation: {} } }
+  });
+
+  if (strides.length > 1) {
+    const bins = 8;
+    const mn = Math.min(...strides), mx = Math.max(...strides);
+    const w = (mx - mn) / bins || 0.1;
+    const counts = Array(bins).fill(0);
+    strides.forEach(s => { const b = Math.min(Math.floor((s - mn) / w), bins - 1); counts[b]++; });
+    const binL = Array.from({ length: bins }, (_, i) => (mn + i * w + w / 2).toFixed(2) + 's');
+    makeChart('beg-stride-chart', {
+      type: 'bar', data: { labels: binL, datasets: [{ label: 'Count', data: counts, backgroundColor: '#4fcfcb88', borderColor: '#4fcfcb', borderWidth: 1 }] },
+      options: barOpts('Count')
+    });
+  }
+
+  // Event table
+  const tbody = peaks.slice(0, 10).map((p, i) => {
+    const stride = i > 0 ? (t[p] - t[peaks[i - 1]]).toFixed(3) : '--';
+    return `<tr><td>${i + 1}</td><td>${t[p].toFixed(3)}</td><td>${sig[p].toFixed(3)}</td><td>${stride}</td></tr>`;
+  }).join('');
+  document.getElementById('beg-table').innerHTML =
+    `<thead><tr><th>#</th><th>Time (s)</th><th>Accel (m/s²)</th><th>Stride (s)</th></tr></thead><tbody>${tbody}</tbody>`;
+}
+
+// ====== BILATERAL ======
+function updateBilateral() {
+  const cad = +document.getElementById('bi-cad').value;
+  const phase = +document.getElementById('bi-phase').value / 100;
+  const lamp = +document.getElementById('bi-lamp').value;
+  const ramp = +document.getElementById('bi-ramp').value;
+  document.getElementById('bi-cad-v').textContent = cad.toFixed(1);
+  document.getElementById('bi-phase-v').textContent = document.getElementById('bi-phase').value;
+  document.getElementById('bi-lamp-v').textContent = lamp.toFixed(1);
+  document.getElementById('bi-ramp-v').textContent = ramp.toFixed(1);
+
+  const lSig = genSignal(cad, lamp, 0.12, 0, 42);
+  const rSig = genSignal(cad, ramp, 0.12, Math.PI * 2 * phase, 99);
+  const lP = findPeaks(lSig, 10.5, 30), rP = findPeaks(rSig, 10.5, 30);
+  const lT = lP.map(i => t[i]), rT = rP.map(i => t[i]);
+  const lStr = lT.slice(1).map((v, i) => v - lT[i]);
+  const rStr = rT.slice(1).map((v, i) => v - rT[i]);
+  const lMean = lStr.length ? mean(lStr) : 0, rMean = rStr.length ? mean(rStr) : 0;
+  const allT = [...lT, ...rT].sort((a, b) => a - b);
+  const stepT = allT.slice(1).map((v, i) => v - allT[i]);
+  const cadSpm = stepT.length ? 60 / mean(stepT) : 0;
+  const symStride = lMean && rMean ? (1 - Math.abs(lMean - rMean) / Math.max(lMean, rMean)) * 100 : 100;
+
+  // Stance / Swing (approximation)
+  const stanceRatio = 0.6;
+  const lStance = lMean * stanceRatio, rStance = rMean * stanceRatio;
+  const lSwing = lMean * (1 - stanceRatio), rSwing = rMean * (1 - stanceRatio);
+  const symStance = lStance && rStance ? (1 - Math.abs(lStance - rStance) / Math.max(lStance, rStance)) * 100 : 100;
+
+  setMetrics('bi-metrics', [
+    { label: 'L Heel Strikes', val: lP.length },
+    { label: 'R Heel Strikes', val: rP.length },
+    { label: 'Cadence', val: fmt(cadSpm, 1), unit: 'steps/min' },
+    { label: 'Stride Symmetry', val: fmt(symStride, 1), unit: '%' },
+    { label: 'Gait Speed', val: fmt((cadSpm / 60) * 0.75, 2), unit: 'm/s' },
+  ]);
+
+  const step = 5, tL = t.filter((_, i) => i % step === 0).map(v => v.toFixed(1));
+  const lD = lSig.filter((_, i) => i % step === 0), rD = rSig.filter((_, i) => i % step === 0);
+  const lPL = tL.map((_, i) => lP.includes(i * step) ? lSig[i * step] : null);
+  const rPL = tL.map((_, i) => rP.includes(i * step) ? rSig[i * step] : null);
+
+  const mkFoot = (data, pd, col, label) => ({
+    type: 'line', data: { labels: tL, datasets: [
+      { label, data, borderColor: col, borderWidth: 1.5, pointRadius: 0, tension: 0.1, fill: false },
+      { label: 'Heel Strike', data: pd, type: 'scatter', pointBackgroundColor: col, pointRadius: 5, borderColor: 'transparent' }
+    ]}, options: lineOpts()
+  });
+  makeChart('bi-left-chart', mkFoot(lD, lPL, '#4f8ef7', 'Left'));
+  makeChart('bi-right-chart', mkFoot(rD, rPL, '#f76f6f', 'Right'));
+
+  makeChart('bi-bar-chart', {
+    type: 'bar',
+    data: {
+      labels: ['Stride L', 'Stride R', 'Stance L', 'Stance R', 'Swing L', 'Swing R'],
+      datasets: [{
+        label: 'Time (s)',
+        data: [lMean, rMean, lStance, rStance, lSwing, rSwing].map(v => +v.toFixed(3)),
+        backgroundColor: ['#4f8ef799','#f76f6f99','#4f8ef766','#f76f6f66','#4f8ef744','#f76f6f44'],
+        borderColor: ['#4f8ef7','#f76f6f','#4f8ef7','#f76f6f','#4f8ef7','#f76f6f'],
+        borderWidth: 1
+      }]
+    }, options: barOpts()
+  });
+
+  document.getElementById('sym-panel').innerHTML = `
+    <div style="display:grid;gap:4px">
+      <div class="sym-row">
+        <div><div class="sym-label">Stride Time Symmetry</div><div class="bar-track"><div class="bar-fill" style="width:${Math.min(symStride,100).toFixed(1)}%"></div></div></div>
+        <div class="sym-val">${fmt(symStride, 1)}%</div>
+      </div>
+      <div class="sym-row">
+        <div><div class="sym-label">Stance Time Symmetry</div><div class="bar-track"><div class="bar-fill" style="width:${Math.min(symStance,100).toFixed(1)}%"></div></div></div>
+        <div class="sym-val">${fmt(symStance, 1)}%</div>
+      </div>
+      <div class="sym-row"><div class="sym-label">Left Stride Mean</div><div class="sym-val">${fmt(lMean)} s</div></div>
+      <div class="sym-row"><div class="sym-label">Right Stride Mean</div><div class="sym-val">${fmt(rMean)} s</div></div>
+      <div class="sym-row"><div class="sym-label">L / R Stride Ratio</div><div class="sym-val">${rMean > 0 ? fmt(lMean / rMean) : '--'}</div></div>
+    </div>`;
+}
+
+// ====== ADVANCED ======
+function updateAdvanced() {
+  const ncad = +document.getElementById('adv-ncad').value;
+  const hcad = +document.getElementById('adv-hcad').value;
+  const hamp = +document.getElementById('adv-hamp').value;
+  document.getElementById('adv-ncad-v').textContent = ncad.toFixed(1);
+  document.getElementById('adv-hcad-v').textContent = hcad.toFixed(1);
+  document.getElementById('adv-hamp-v').textContent = hamp.toFixed(1);
+
+  const nL = genSignal(ncad, 2.0, 0.12, 0, 42);
+  const nR = genSignal(ncad, 2.0, 0.12, Math.PI, 43);
+  const hL = genSignal(hcad, 2.5, 0.15, 0, 42);
+  const hR = genSignal(hcad, hamp, 0.22, Math.PI, 43);
+
+  const nLP = findPeaks(nL, 10.5, 30), nRP = findPeaks(nR, 10.5, 30);
+  const hLP = findPeaks(hL, 10.5, 30), hRP = findPeaks(hR, Math.max(9.5, 9.8 + hamp * 0.3), 30);
+
+  const calcCV = peaks => {
+    const times = peaks.map(i => t[i]);
+    const strides = times.slice(1).map((v, i) => v - times[i]);
+    return strides.length > 1 ? cv(strides) : 0;
+  };
+  const calcCad = peaks => {
+    const times = peaks.map(i => t[i]);
+    const strides = times.slice(1).map((v, i) => v - times[i]);
+    return strides.length ? 60 / mean(strides) : 0;
+  };
+  const calcMeanStride = peaks => {
+    const times = peaks.map(i => t[i]);
+    const strides = times.slice(1).map((v, i) => v - times[i]);
+    return strides.length ? mean(strides) : 0;
+  };
+
+  const nLCV = calcCV(nLP), nRCV = calcCV(nRP);
+  const hLCV = calcCV(hLP), hRCV = calcCV(hRP);
+  const nCad = calcCad([...nLP, ...nRP]);
+  const hCad = calcCad([...hLP, ...hRP]);
+  const nGS = (nCad / 60) * 0.75, hGS = (hCad / 60) * 0.75;
+
+  const step = 5, tL = t.filter((_, i) => i % step === 0).map(v => v.toFixed(1));
+  const nLD = nL.filter((_, i) => i % step === 0), nRD = nR.filter((_, i) => i % step === 0);
+  const hLD = hL.filter((_, i) => i % step === 0), hRD = hR.filter((_, i) => i % step === 0);
+
+  const mkCfg2 = (dL, dR, lL, lR, cL, cR) => ({
+    type: 'line', data: { labels: tL, datasets: [
+      { label: lL, data: dL, borderColor: cL, borderWidth: 1.5, pointRadius: 0, tension: 0.1, fill: false },
+      { label: lR, data: dR, borderColor: cR, borderWidth: 1.5, pointRadius: 0, tension: 0.1, fill: false }
+    ]}, options: lineOpts()
+  });
+  makeChart('adv-norm-chart', mkCfg2(nLD, nRD, 'Left', 'Right', '#4f8ef7', '#f76f6f'));
+  makeChart('adv-hemi-chart', mkCfg2(hLD, hRD, 'Left (normal)', 'Right (affected)', '#4ecb91', '#f7c34f'));
+
+  makeChart('adv-cv-chart', {
+    type: 'bar',
+    data: {
+      labels: ['Normal — Left', 'Normal — Right', 'Hemiplegic — Left', 'Hemiplegic — Right'],
+      datasets: [{
+        label: 'Stride CV (%)',
+        data: [nLCV, nRCV, hLCV, hRCV].map(v => +v.toFixed(2)),
+        backgroundColor: ['#4ecb9188','#4ecb9166','#f7c34f88','#f7c34f66'],
+        borderColor: ['#4ecb91','#4ecb91','#f7c34f','#f7c34f'],
+        borderWidth: 1
+      }]
+    }, options: barOpts('CV (%)')
+  });
+
+  const rows = [
+    ['Cadence (steps/min)', fmt(nCad,1), fmt(hCad,1), hCad < nCad ? '↓ Slower gait' : '≈ Similar'],
+    ['Gait Speed (m/s)', fmt(nGS,2), fmt(hGS,2), hGS < nGS ? '↓ Reduced speed' : '≈ Similar'],
+    ['Left Stride CV (%)', fmt(nLCV,1), fmt(hLCV,1), hLCV > nLCV ? '↑ More variable' : '≈ Similar'],
+    ['Right Stride CV (%)', fmt(nRCV,1), fmt(hRCV,1), hRCV > nRCV ? '↑ Affected side' : '≈ Similar'],
+    ['L Heel Strikes', nLP.length, hLP.length, ''],
+    ['R Heel Strikes', nRP.length, hRP.length, Math.abs(nRP.length-hRP.length)>3 ? '⚠ Asymmetry detected' : ''],
+  ];
+
+  document.getElementById('adv-table').innerHTML =
+    `<thead><tr><th>Parameter</th><th style="color:#4ecb91">Normal</th><th style="color:#f7c34f">Hemiplegic</th><th>Interpretation</th></tr></thead>
+     <tbody>${rows.map(r=>`<tr>${r.map((c,i)=>`<td${i===3?' style="color:var(--muted);font-size:12px"':''}>${c}</td>`).join('')}</tr>`).join('')}</tbody>`;
+}
+
+// ====== TAB SWITCH ======
+function switchTab(name) {
+  ['beginner','bilateral','advanced'].forEach((n, i) => {
+    document.querySelectorAll('.tab')[i].classList.toggle('active', n === name);
+    document.getElementById(`tab-${n}`).classList.toggle('active', n === name);
+  });
+  if (name === 'beginner') updateBeg();
+  if (name === 'bilateral') updateBilateral();
+  if (name === 'advanced') updateAdvanced();
+}
+
+// ====== CSV EXPORT ======
+function downloadCSV() {
+  if (!lastBegData.sig) return;
+  const { sig, peaks } = lastBegData;
+  const rows = [['time_s','accel_z_ms2','heel_strike']];
+  t.forEach((ti, i) => rows.push([ti.toFixed(2), sig[i].toFixed(4), peaks.includes(i) ? 1 : 0]));
+  const csv = rows.map(r => r.join(',')).join('\n');
+  const a = document.createElement('a');
+  a.href = 'data:text/csv,' + encodeURIComponent(csv);
+  a.download = 'gait_data_beginner.csv';
+  a.click();
+}
+
+// Init
+updateBeg();
+</script>
+</body>
+</html>
